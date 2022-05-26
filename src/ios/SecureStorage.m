@@ -12,7 +12,14 @@
     NSString *keychainAccessibility;
     NSDictionary *keychainAccesssibilityMapping;
 
-    if ([[[UIDevice currentDevice] systemVersion] floatValue] >= 8.0){
+    ///check device has passcode
+    NSData* secret = [@"Device has passcode set?" dataUsingEncoding:NSUTF8StringEncoding];
+    NSDictionary *attributes = @{ (__bridge id)kSecClass: (__bridge id)kSecClassGenericPassword, (__bridge id)kSecAttrService: @"LocalDeviceServices",  (__bridge id)kSecAttrAccount: @"NoAccount", (__bridge id)kSecValueData: secret, (__bridge id)kSecAttrAccessible: (__bridge id)kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly };
+
+    OSStatus status = SecItemAdd((__bridge CFDictionaryRef)attributes, NULL);
+    if (status == errSecSuccess) { // item added okay, passcode has been set            
+    SecItemDelete((__bridge CFDictionaryRef)attributes);
+            if ([[[UIDevice currentDevice] systemVersion] floatValue] >= 8.0){
           keychainAccesssibilityMapping = [NSDictionary dictionaryWithObjectsAndKeys:
               (__bridge id)(kSecAttrAccessibleAfterFirstUnlock), @"afterfirstunlock",
               (__bridge id)(kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly), @"afterfirstunlockthisdeviceonly",
@@ -28,6 +35,8 @@
               (__bridge id)(kSecAttrAccessibleWhenUnlockedThisDeviceOnly), @"whenunlockedthisdeviceonly",
               nil];
     }
+
+
     keychainAccessibility = [[self.commandDelegate.settings objectForKey:[@"KeychainAccessibility" lowercaseString]] lowercaseString];
     if (keychainAccessibility == nil) {
         [self successWithMessage: nil : command.callbackId];
@@ -39,6 +48,11 @@
         } else {
             [self failWithMessage: @"Unrecognized KeychainAccessibility value in config" : nil : command.callbackId];
         }
+    }
+    }
+    else
+    {
+         [self failWithMessage: @"Device is not secure" : nil : command.callbackId];
     }
 }
 
